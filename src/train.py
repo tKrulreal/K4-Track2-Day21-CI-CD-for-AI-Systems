@@ -5,6 +5,7 @@ import yaml
 import json
 import joblib
 import os
+from pathlib import Path
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import accuracy_score, f1_score
 
@@ -32,6 +33,10 @@ def train(
     y_train = df_train["target"]
     X_eval = df_eval.drop(columns=["target"])
     y_eval = df_eval["target"]
+
+    tracking_uri = Path("mlruns_local").resolve().as_uri()
+    mlflow.set_tracking_uri(tracking_uri)
+    mlflow.set_experiment("income-model")
 
     with mlflow.start_run():
         # TODO 3: Ghi nhận siêu tham số vào MLflow
