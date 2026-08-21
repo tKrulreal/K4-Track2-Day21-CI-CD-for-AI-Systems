@@ -98,47 +98,18 @@ jobs:
     steps:
       - name: Prepare SSH key
         env:
-          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
         run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-      - name: Debug SSH connection
-        env:
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-        run: |
-          echo "=== SSH Diagnostic ==="
-          echo "Host: $SERVER_HOST"
-          echo "User: $SERVER_USER"
-          echo "Key file:"
-          ls -la ~/.ssh/deploy_key
-          echo "Key content (first 60 chars):"
-          head -c 60 ~/.ssh/deploy_key
-          echo ""
-          echo "=== Testing SSH with verbose output ==="
-          ssh -vvv \
-            -o StrictHostKeyChecking=no \
-            -o UserKnownHostsFile=/dev/null \
-            -i ~/.ssh/deploy_key \
-            -o ConnectTimeout=10 \
-            "${SERVER_USER}@${SERVER_HOST}" \
-            "echo 'SSH OK'; hostname" 2>&1 | tee ssh_debug.log
-          SSH_EXIT=$?
-          echo "SSH exit code: $SSH_EXIT"
-          if [ $SSH_EXIT -ne 0 ]; then
-            echo "=== First SSH error lines ==="
-            head -30 ssh_debug.log
-          fi
+          mkdir -p .ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > .ssh/deploy_key
+          chmod 600 .ssh/deploy_key
       - name: SSH deploy to EC2
         uses: appleboy/ssh-action@v1.1.0
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
-          key_path: ~/.ssh/deploy_key
-          timeout: 30s
+          key_path: .ssh/deploy_key
           command_timeout: 10m
-          debug: true
           script: |
             sudo systemctl restart income-api
             sleep 10
