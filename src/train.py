@@ -33,6 +33,10 @@ def train(
     X_eval = df_eval.drop(columns=["target"])
     y_eval = df_eval["target"]
 
+    if not os.getenv("MLFLOW_TRACKING_URI"):
+        mlflow.set_tracking_uri(f"file:{os.path.abspath('mlruns_local')}")
+        mlflow.set_experiment("income-model")
+
     with mlflow.start_run():
         # TODO 3: Ghi nhận siêu tham số vào MLflow
         mlflow.log_params(params)

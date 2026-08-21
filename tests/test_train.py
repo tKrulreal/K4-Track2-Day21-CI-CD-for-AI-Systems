@@ -83,3 +83,19 @@ def test_model_file_created(tmp_path):
 
     # TODO 9: Kiem tra file model ton tai
     assert os.path.exists("models/model.joblib")
+
+
+def test_train_with_broken_default_mlruns_dir(tmp_path, monkeypatch):
+    """Kiem tra train() van chay khi thu muc mlruns mac dinh bi hong."""
+    train_path, eval_path = _make_temp_data(tmp_path)
+    (tmp_path / "mlruns" / "0").mkdir(parents=True)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("MLFLOW_TRACKING_URI", raising=False)
+
+    f1 = train(
+        {"n_estimators": 10, "learning_rate": 0.1, "max_depth": 2},
+        data_path=train_path,
+        eval_path=eval_path,
+    )
+
+    assert isinstance(f1, float)

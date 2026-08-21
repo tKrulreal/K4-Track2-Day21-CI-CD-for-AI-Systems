@@ -1,4 +1,5 @@
 mlflow.db
+mlruns_local/
 mlartifacts/
 models/
 outputs/
