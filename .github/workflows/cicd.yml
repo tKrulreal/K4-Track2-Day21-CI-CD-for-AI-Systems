@@ -109,6 +109,9 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key_path: ~/.ssh/deploy_key
+          timeout: 30s
+          command_timeout: 10m
+          debug: true
           script: |
             sudo systemctl restart income-api
             sleep 10
