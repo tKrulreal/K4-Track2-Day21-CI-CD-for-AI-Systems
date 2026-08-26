@@ -1,103 +1,54 @@
 # Báo Cáo Lab Day 21 - CI/CD cho AI Systems
 
-<!--
-HƯỚNG DẪN - đọc rồi XÓA TOÀN BỘ các khối chú thích này sau khi điền xong:
-
-  - Giới hạn: KHÔNG QUÁ 1 TRANG A4, tương đương khoảng 450 - 550 từ nội dung.
-  - Chỉ điền vào các chỗ ___ và các ô trong bảng. Không thêm mục mới.
-  - Viết bằng câu hoàn chỉnh, không gạch đầu dòng cụt lủn.
-  - Kiểm tra độ dài sau khi đã xóa hết chú thích:
-        wc -w nop-bai/bao-cao.md
-    và xem trước bản in bằng cách mở file trên GitHub rồi Ctrl+P / Cmd+P.
--->
-
 | | |
 |---|---|
 | Họ và tên | ___ |
 | MSSV | ___ |
 | Lớp / Khóa | K4 |
-| Repo GitHub | https://github.com/___/___ |
-| Ngày nộp | ___ |
+| Repo GitHub | https://github.com/tKrulreal/K4-Track2-Day21-CI-CD-for-AI-Systems |
+| Ngày nộp | 2026-08-21 |
 
 ---
 
 ## 1. Bộ Siêu Tham Số Đã Chọn và Lý Do
 
-<!-- Khoảng 120 - 150 từ. Điền kết quả thật từ MLflow UI ở Bước 1, tối thiểu 3 lần chạy. -->
-
 | Lần chạy | n_estimators | learning_rate | max_depth | f1_score | accuracy |
 |---|---|---|---|---|---|
-| 1 | ___ | ___ | ___ | ___ | ___ |
-| 2 | ___ | ___ | ___ | ___ | ___ |
-| 3 | ___ | ___ | ___ | ___ | ___ |
+| 1 | 100 | 0.1 | 3 | 0.7109 | 0.878 |
+| 2 | 50 | 0.05 | 2 | 0.6051 | 0.846 |
+| 3 | 200 | 0.1 | 5 | 0.7149 | 0.874 |
 
-**Bộ siêu tham số đã chọn:** `n_estimators=___`, `learning_rate=___`, `max_depth=___`.
+**Bộ siêu tham số đã chọn:** `n_estimators=200`, `learning_rate=0.1`, `max_depth=5`.
 
-**Lý do:** ___
-
-<!--
-Trả lời trong phần Lý do:
-  - Vì sao bộ này tốt hơn các bộ còn lại (dựa trên f1_score, không phải accuracy)?
-  - Lần chạy có accuracy cao nhất có trùng với lần có f1_score cao nhất không?
-    Nếu không, điều đó nói lên điều gì?
-  - Bạn quan sát thấy đánh đổi nào giữa n_estimators và learning_rate?
--->
+**Lý do:** Bộ này cho f1_score cao nhất (0.7149) trên tập holdout và vượt ngưỡng chất lượng 0.65 của pipeline. Đáng chú ý, lần chạy có accuracy cao nhất là lần chạy 1 (0.878), nhưng lần chạy có f1_score cao nhất lại là lần chạy 3 (0.7149) — hai chỉ số không trùng nhau. Điều này cho thấy accuracy bị lớp đa số (75.2% mẫu có thu nhập thấp) kéo lên cao giả tạo, trong khi f1 của lớp dương phản ánh đúng chất lượng thực sự của mô hình trên lớp thiểu số. Quan sát thêm: giảm đồng thời n_estimators và learning_rate (lần chạy 2) làm f1 tụt mạnh xuống 0.6051 — dưới ngưỡng — chứng tỏ hai tham số này có quan hệ đánh đổi: mô hình cần đủ số cây và mỗi cây đóng góp đủ lớn để học được mẫu thu nhập cao.
 
 ---
 
 ## 2. Vì Sao Ngưỡng Chất Lượng Đặt Trên F1 Chứ Không Phải Accuracy
 
-<!-- Khoảng 120 - 150 từ. -->
-
-___
-
-<!--
-Cần nêu được:
-  - Phân bố lớp của tập dữ liệu (tỷ lệ lớp thu nhập > 50K) và hệ quả của nó.
-  - Accuracy của một mô hình luôn trả lời "thu nhập thấp" là bao nhiêu, vì sao con số
-    đó gây hiểu nhầm.
-  - F1 của lớp dương đo điều gì mà accuracy không đo được.
-  - Vì sao KHÔNG dùng average="weighted" hay average="macro" khi gọi f1_score.
--->
+Tập dữ liệu Adult có phân bố lớp mất cân bằng: chỉ 24.8% mẫu thuộc lớp thu nhập > 50K (5539 mẫu dương trên 22361 mẫu ở tập train, 124/500 ở holdout). Một mô hình "đoán bừa" luôn trả lời thu nhập thấp sẽ đạt accuracy khoảng 0.752 mà không dự đoán đúng một mẫu dương nào — con số này trông ổn nhưng hoàn toàn vô dụng cho bài toán thực tế. F1 của lớp dương đo đồng thời precision và recall trên lớp thiểu số, nắm bắt được chất lượng thực sự mà accuracy bỏ sót. Khi gọi `f1_score` không truyền `average` nào (mặc định `binary`, lớp dương) là lựa chọn đúng; nếu dùng `average="weighted"` hay `average="macro"`, lớp đa số sẽ chi phối kết quả và ngưỡng 0.65 mất ý nghĩa cảnh báo chất lượng. Vì vậy toàn bộ pipeline — từ `train()` trả về `f1`, đến quality gate so sánh `f1 >= 0.65`, đến điền vào `outputs/report.json` — đều dùng f1 lớp dương làm chỉ số quyết định.
 
 ---
 
 ## 3. Khó Khăn Gặp Phải và Cách Giải Quyết
 
-<!-- Nêu 2 - 3 khó khăn thật, mỗi ô một câu ngắn. -->
-
 | Khó khăn | Nguyên nhân | Cách giải quyết |
 |---|---|---|
-| ___ | ___ | ___ |
-| ___ | ___ | ___ |
-| ___ | ___ | ___ |
+| Pipeline trên GitHub Actions lỗi `dvc pull` ở job Train | DVC thiếu extension S3, không kết nối được cloud storage chứa data | Cài thêm `dvc[s3]` vào bước Install dependencies trước khi chạy `dvc pull`. |
+| Local MLflow ghi vào `mlruns/` bị hỏng trong CI, làm Unit Test fail | Train job chạy `mlflow` mặc định ghi vào `./mlruns` nếu `MLFLOW_TRACKING_URI` chưa set, trùng thư mục của Unit Test | Tách MLflow local ra `mlruns_local` qua `mlflow.set_tracking_uri(...)` khi biến môi trường chưa được set, tránh đụng độ thư mục giữa hai job. |
+| Release job SSH deploy tới EC2 fail với `getKeyFile error: open ~/.ssh/deploy_key: no such file or directory` | `appleboy/ssh-action` chạy script trong container Docker riêng (drone-ssh) chỉ mount `/github/workspace`; viết key vào `~/.ssh/deploy_key` trên runner nằm ngoài container và không được mount vào | Ghi key vào `<workspace>/.ssh/deploy_key` (relative path) và truyền `key_path: .ssh/deploy_key` — action resolve path theo workspace đã mount vào container. |
 
 ---
 
 ## 4. So Sánh Bước 2 và Bước 3 (bắt buộc, 2 - 3 câu)
 
-<!-- Lấy số liệu từ bảng ở mục 3.6 của tasks/buoc-3.md. -->
-
 | | f1_score | accuracy |
 |---|---|---|
-| Bước 2 (chỉ `train_batch1`) | ___ | ___ |
-| Bước 3 (thêm `train_batch2`) | ___ | ___ |
+| Bước 2 (chỉ `train_batch1`) | 0.7149 | 0.874 |
+| Bước 3 (thêm `train_batch2`) | 0.7354 | 0.882 |
 
-**Nhận xét:** ___
-
-<!--
-Một câu trả lời trung thực kiểu "f1 giảm 0,01 vì dữ liệu mới cùng phân phối, không mang
-thêm thông tin mới" được đánh giá cao hơn kết luận sai rằng thêm dữ liệu luôn tốt hơn.
--->
+**Nhận xét:** Cả f1_score (0.7149 → 0.7354) và accuracy (0.874 → 0.882) đều tăng nhẹ ở Bước 3, nhưng mức tăng khiêm tốn (khoảng +0.02 cho f1). Điều này phù hợp với nhận định trong tài liệu bước 3: hai batch `train_batch1` và `train_batch2` được chia ngẫu nhiên từ cùng một phân phối gốc của Adult, nên batch2 không mang thêm thông tin mới mà mô hình chưa học được từ batch1. Việc f1 vẫn tăng thay vì giảm chỉ là dao động ngẫu nhiên trong giới hạn chung của mô hình — điều được kiểm chứng ở Bước 3 không phải con số cao hơn, mà là pipeline tự động chạy đến cùng: từ commit dữ liệu → train lại → quality gate → release tới EC2, không cần thao tác thủ công.
 
 ---
 
 ## 5. Phần Bonus Đã Thực Hiện (nếu có)
-
-<!-- Xóa cả mục 5 nếu không làm bonus. Mỗi bonus tối đa 1 dòng. -->
-
-- [ ] Bonus 1 - Tracking MLflow từ xa với DagsHub: ___
-- [ ] Bonus 2 - Điều chỉnh ngưỡng quyết định: ___
-- [ ] Bonus 3 - Báo cáo precision / recall tự động: ___
-- [ ] Bonus 4 - Hoàn trả về phiên bản trước: ___
-- [ ] Bonus 5 - Cảnh báo lệch lạc dữ liệu: ___
